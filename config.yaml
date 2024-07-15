@@ -1,0 +1,27 @@
+mode:
+  debug: True
+  standard: False
+
+#config for standard version
+config_st:
+  model:
+  size:
+  batch_size: 1
+  video:
+  img:
+  cam_id: 0
+  show: False
+  save: True
+  savePath:
+
+#config for debug version
+config_de:
+#  model:
+  size: 640
+  batch_size: 1
+#  video:
+#  img:
+  cam_id: 0
+  show: True
+  save: False
+#  savePath:

@@ -3,255 +3,201 @@
 #include <thread>
 #include "../include/serialport.h"
 
-void setParameters(utils::InitParameter& initParameters)
-{
-//	initParameters.class_names = utils::dataSets::coco80;
+SerialPort serialPort1;
+
+void setParameters(utils::InitParameter &initParameters) {
     initParameters.class_names = utils::dataSets::RM;
-//	initParameters.class_names = utils::dataSets::voc20;
-//	initParameters.num_class = 80; // for coco
     initParameters.num_class = 12;
-//	initParameters.num_class = 20; // for voc2012
-	initParameters.batch_size = 1;
-	initParameters.dst_h = 640;
-	initParameters.dst_w = 640;
-	initParameters.input_output_names = { "images",  "output0" };
-	initParameters.conf_thresh = 0.25f;
-	initParameters.iou_thresh = 0.45f;
-	initParameters.save_path = "";
+    initParameters.batch_size = 1;
+    initParameters.dst_h = 640;
+    initParameters.dst_w = 640;
+    initParameters.input_output_names = {"images", "output0"};
+    initParameters.conf_thresh = 0.5f;
+    initParameters.iou_thresh = 0.7f;
+    initParameters.save_path = "";
 }
 
 void task(YOLOV8& yolo, const utils::InitParameter& param, std::vector<cv::Mat>& imgsBatch, const int& delayTime, const int& batchi,
-	const bool& isShow, const bool& isSave)
+          const bool& isShow, const bool& isSave)
 {
+    //前处理、推理、后处理
     utils::DeviceTimer d_t0; yolo.copy(imgsBatch);	      float t0 = d_t0.getUsedTime();
     utils::DeviceTimer d_t1; yolo.preprocess(imgsBatch);  float t1 = d_t1.getUsedTime();
     utils::DeviceTimer d_t2; yolo.infer();				  float t2 = d_t2.getUsedTime();
     utils::DeviceTimer d_t3; yolo.postprocess(imgsBatch); float t3 = d_t3.getUsedTime();
-	sample::gLogInfo << 
-		//"copy time = " << t0 / param.batch_size << "; "
-		"preprocess time = " << t1 / param.batch_size << "; "
-		"infer time = " << t2 / param.batch_size << "; "
-		"postprocess time = " << t3 / param.batch_size << std::endl;
-    // 调用 getitom 函数
+    sample::gLogInfo <<
+                     //"copy time = " << t0 / param.batch_size << "; "
+                     "preprocess time = " << t1 / param.batch_size << "; "
+                     "infer time = " << t2 / param.batch_size << "; "
+                     "postprocess time = "<< t3 / param.batch_size << std::endl;
+    // 调用 getitom 函数（内含测试参数）
     std::vector<utils::Result> results = utils::getitom(yolo.getObjectss(), param.class_names, delayTime, imgsBatch);
-    // 遍历结果向量并处理每个元素
+    // 调用 sendmessage 函数(内含串口参数)
+    utils::sendmessage(serialPort1.fd,results);
+    if (isShow)
+        utils::show(yolo.getObjectss(), param.class_names, delayTime, imgsBatch);
+    if (isSave)
+        utils::save(yolo.getObjectss(), param.class_names, param.save_path, imgsBatch, param.batch_size, batchi);
+    yolo.reset();
+}
+
+int main(int argc, char **argv) {
+    // 程序初始化
+    utils::InitParameter param;
+    // yolo 相关初始参数设置（自行进入修改）
+    setParameters(param);
+
+    // path 相关初始参数路径
+    std::string model_path = "../best.trt";
+    std::string video_path = "../../data/people.mp4";
+    std::string image_path = "../../data/bus.jpg";
+    std::string yaml_path = "/home/plusseven/桌面/Comb/TensorRT-Alpha-main(check)/config.yaml";
+
+    // camera' id 相机id
+    int camera_id = 0;
+
     char *port_path1 = "/dev/ttyUSB0";
-    SerialPort serialPort1;
     serialPort1.initSerialPort(port_path1);
     tcflush(serialPort1.fd, TCIFLUSH);
-    char sig[3] = "ED";
-    for (const auto& result : results)
-    {
-        char str[9] = "ST000000";
 
-//        std::cout<<result.className<<"::"<<result.conf<<"%"<<"::"<<result.x<<"::"<<result.y<<std::endl;
-        if (result.conf >= 0.6)
+    // get input 默认参数
+    utils::InputStream source;
+//    source = utils::InputStream::IMAGE;
+//    source = utils::InputStream::VIDEO;
+//    source = utils::InputStream::CAMERA;
+
+    int size = -1; // w or h
+    int batch_size = 1;
+    bool is_show = false;
+    bool is_save = false;
+
+//    YAML::Node config = YAML::LoadFile(yaml_path);
+//    try {
+        YAML::Node config = YAML::LoadFile(yaml_path);
+        if (config["mode"]) {
+            if (config["mode"]["debug"]) {
+                if (config["config_de"]["model"])
+                    model_path = config["config_de"]["model"].as<std::string>();
+                if (config["config_de"]["size"])
+                    size = config["config_de"]["size"].as<int>();
+                if (config["config_de"]["batch_size"])
+                    batch_size = config["config_de"]["batch_size"].as<int>();
+                if (config["config_de"]["video"]){
+                    source = utils::InputStream::VIDEO;
+                    video_path = config["config_de"]["video"].as<std::string>();}
+                if (config["config_de"]["img"]){
+                    source = utils::InputStream::IMAGE;
+                    image_path = config["config_de"]["img"].as<std::string>();}
+                if (config["config_de"]["cam_id"]){
+                    source = utils::InputStream::CAMERA;
+                    camera_id = config["config_de"]["cam_id"].as<int>();}
+                if (config["config_de"]["show"])
+                    is_show = config["config_de"]["show"].as<bool>();
+                if (config["config_de"]["save"])
+                    is_save = config["config_de"]["save"].as<bool>();
+                if (is_save) {
+                    param.save_path = config["config_de"]["savePath"].as<std::string>();
+                }
+            } else if (config["mode"]["standard"]) {
+                if (config["config_st"]["model"])
+                    model_path = config["config_st"]["model"].as<std::string>();
+                if (config["config_st"]["size"])
+                    size = config["config_st"]["size"].as<int>();
+                if (config["config_st"]["batch_size"])
+                    batch_size = config["config_st"]["batch_size"].as<int>();
+                if (config["config_st"]["video"]){
+                    source = utils::InputStream::VIDEO;
+                    video_path = config["config_st"]["video"].as<std::string>();}
+                if (config["config_st"]["img"]){
+                    source = utils::InputStream::IMAGE;
+                    image_path = config["config_st"]["img"].as<std::string>();}
+                if (config["config_st"]["cam_id"]){
+                    source = utils::InputStream::CAMERA;
+                    camera_id = config["config_st"]["cam_id"].as<int>();}
+                if (config["config_st"]["show"])
+                    is_show = config["config_st"]["show"].as<bool>();
+                if (config["config_st"]["save"])
+                    is_save = config["config_st"]["save"].as<bool>();
+                if (is_save) {
+                    param.save_path = config["config_st"]["savePath"].as<std::string>();
+                }
+            }
+            param.batch_size = batch_size;
+            param.dst_h = param.dst_w = size;
+        }
+//    }
+//    catch (...) {
+//        std::cerr << "Init with yaml failed" << std::endl;
+//    }
+
+    int total_batches = 0;
+    int delay_time = 1;
+    cv::VideoCapture capture;
+
+    sample::gLogInfo << "Config below:image_path::" << image_path << ";video_path::" << video_path << ";camera_id::"
+                     << camera_id << ";is_show::" << is_show << ";is_save::" << is_save << std::endl;
+    if (!setInputStream(source, image_path, video_path, camera_id,
+                        capture, total_batches, delay_time, param))
+        //判断初始化是否成功
+    {
+        sample::gLogError << "read the input data errors!" << std::endl;
+        return -1;
+    }
+    YOLOV8 yolo(param);
+    // read model
+    std::vector<unsigned char> trt_file = utils::loadModel(model_path);
+    if (trt_file.empty()) {
+        sample::gLogError << "trt_file is empty!" << std::endl;
+        return -1;
+    }
+    // init model
+    if (!yolo.init(trt_file)) {
+        sample::gLogError << "initEngine() ocur errors!" << std::endl;
+        return -1;
+    }
+    //初始化引擎
+    yolo.check();
+    cv::Mat frame;
+    std::vector<cv::Mat> imgs_batch;
+    imgs_batch.reserve(param.batch_size);
+    sample::gLogInfo << imgs_batch.capacity() << std::endl;
+    int batchi = 0;
+    while (capture.isOpened())
+    {
+        if (batchi >= total_batches && source != utils::InputStream::CAMERA)
         {
-            switch(result.x)
+            break;
+        }
+        if (imgs_batch.size() < param.batch_size) // get input
+        {
+            if (source != utils::InputStream::IMAGE)
             {
-                case 1 ... 216 :
-                    std::cout << "A" << std::endl;
-                    str[2] = 'A';
-                    break;
-                case 217 ... 432 :
-                    std::cout << "B" << std::endl;
-                    str[2] = 'B';
-                    break;
-                case 433 ... 648 :
-                    std::cout << "C" << std::endl;
-                    str[2] = 'C';
-                    break;
-                case 649 ... 864 :
-                    std::cout << "D" << std::endl;
-                    str[2] = 'D';
-                    break;
-                case 865 ... 1080:
-                    std::cout << "E" << std::endl;
-                    str[2] = 'E';
-                    break;
+                capture.read(frame);
             }
-            switch(result.y)
+            else
             {
-                case 1 ... 200 :
-                    std::cout << "1" << std::endl;
-                    str[3] = '1';
-                    break;
-                case 201 ... 400 :
-                    std::cout << "2" << std::endl;
-                    str[3] = '2';
-                    break;
-                case 401 ... 600 :
-                    std::cout << "3" << std::endl;
-                    str[3] = '3';
-                    break;
+                frame = cv::imread(image_path);
             }
-            strncpy(str + 4, result.className.c_str(), result.className.size()); // 拷贝string到char数组中，从第3个位置开始拷贝
-            strncpy(str + 6, sig, 2); // 拷贝string到char数组中，从第3个位置开始拷贝
-            std::cout <<"OUT::"<< str << std::endl; // 打印拼接后的结果
-            write(serialPort1.fd, str, 6); // 写入6个字符到串口
+
+            if (frame.empty())
+            {
+                sample::gLogWarning << "no more video or camera frame" << std::endl;
+                task(yolo, param, imgs_batch, delay_time, batchi, is_show, is_save);
+                imgs_batch.clear();
+                batchi++;
+                break;
+            }
+            else
+            {
+                imgs_batch.emplace_back(frame.clone());
+            }
+        }
+        else
+        {
+            task(yolo, param, imgs_batch, delay_time, batchi, is_show, is_save);
+            imgs_batch.clear();
+            batchi++;
         }
     }
-	if(isShow)
-		utils::show(yolo.getObjectss(), param.class_names, delayTime, imgsBatch);
-	if(isSave)
-		utils::save(yolo.getObjectss(), param.class_names, param.save_path, imgsBatch, param.batch_size, batchi);
-	yolo.reset();
+    return  -1;
 }
-
-int main(int argc, char** argv)
-{
-    cv::CommandLineParser parser(argc, argv,
-                                 {
-                                         "{model         || tensorrt model file     }"
-                                         "{size      || image (h, w), eg: 640   }"
-                                         "{batch_size|| batch size              }"
-                                         "{video     || video's path                        }"
-                                         "{img       || image's path                        }"
-                                         "{cam_id    || camera's device id          }"
-                                         "{show      || if show the result          }"
-                                         "{savePath  || save path, can be ignore}"
-                                 });
-
-    // parameters 这里需要进去修改类别等
-	utils::InitParameter param;
-	setParameters(param);
-
-	// path 相关路径
-	std::string model_path = "./best.trt";
-	std::string video_path = "../../data/people.mp4";
-	std::string image_path = "../../data/bus.jpg";
-	// camera' id 相机id
-	int camera_id = 0;
-
-	// get input 默认参数
-	utils::InputStream source;
-//	source = utils::InputStream::IMAGE;
-//	source = utils::InputStream::VIDEO;
-//	source = utils::InputStream::CAMERA;
-
-	// update params from command line parser 从命令行里更新参数
-	int size = -1; // w or h
-	int batch_size = 1;
-	bool is_show = false;
-	bool is_save = false;
-	if(parser.has("model"))
-	{
-		model_path = parser.get<std::string>("model");
-		sample::gLogInfo << "model_path = " << model_path << std::endl;
-	}
-	if(parser.has("size"))
-	{
-		size = parser.get<int>("size");
-		sample::gLogInfo << "size = " << size << std::endl;
-		param.dst_h = param.dst_w = size;
-	}
-	if(parser.has("batch_size"))
-	{
-		batch_size = parser.get<int>("batch_size");
-		sample::gLogInfo << "batch_size = " << batch_size << std::endl;
-		param.batch_size = batch_size;
-	}
-	if(parser.has("video"))
-	{
-		source = utils::InputStream::VIDEO;
-		video_path = parser.get<std::string>("video");
-		sample::gLogInfo << "video_path = " << video_path << std::endl;
-	}
-	if(parser.has("img"))
-	{
-		source = utils::InputStream::IMAGE;
-		image_path = parser.get<std::string>("img");
-		sample::gLogInfo << "image_path = " << image_path << std::endl;
-	}
-	if(parser.has("cam_id"))
-	{
-		source = utils::InputStream::CAMERA;
-		camera_id = parser.get<int>("cam_id");
-		sample::gLogInfo << "camera_id = " << camera_id << std::endl;
-	}
-	if(parser.has("show"))
-	{
-		is_show = true;
-		sample::gLogInfo << "is_show = " << is_show << std::endl;
-	}
-	if(parser.has("savePath"))
-	{
-		is_save = true;
-		param.save_path = parser.get<std::string>("savePath");
-		sample::gLogInfo << "save_path = " << param.save_path << std::endl;
-	}
-
-	int total_batches = 0;
-	int delay_time = 1;
-	cv::VideoCapture capture;
-
-    if (!setInputStream(source, image_path, video_path, camera_id,
-		capture, total_batches, delay_time, param))
-    //判断初始化是否成功
-	{
-		sample::gLogError << "read the input data errors!" << std::endl;
-		return -1;
-	}
-
-	YOLOV8 yolo(param);
-
-	// read model
-	std::vector<unsigned char> trt_file = utils::loadModel(model_path);
-	if (trt_file.empty())
-	{
-		sample::gLogError << "trt_file is empty!" << std::endl;
-		return -1;
-	}
-	// init model
-	if (!yolo.init(trt_file))
-	{
-		sample::gLogError << "initEngine() ocur errors!" << std::endl;
-		return -1;
-	}
-    //初始化引擎
-	yolo.check();
-	cv::Mat frame;
-	std::vector<cv::Mat> imgs_batch;
-	imgs_batch.reserve(param.batch_size);
-	sample::gLogInfo << imgs_batch.capacity() << std::endl;
-	int batchi = 0;
-	while (capture.isOpened())
-	{
-		if (batchi >= total_batches && source != utils::InputStream::CAMERA)
-		{
-			break;
-		}
-		if (imgs_batch.size() < param.batch_size) // get input
-		{
-			if (source != utils::InputStream::IMAGE)
-			{
-				capture.read(frame);
-			}
-			else
-			{
-				frame = cv::imread(image_path);
-			}
-
-			if (frame.empty())
-			{
-				sample::gLogWarning << "no more video or camera frame" << std::endl;
-				task(yolo, param, imgs_batch, delay_time, batchi, is_show, is_save);
-				imgs_batch.clear();
-				batchi++;
-				break;
-			}
-			else
-			{
-				imgs_batch.emplace_back(frame.clone());
-			}
-		}
-		else
-		{
-			task(yolo, param, imgs_batch, delay_time, batchi, is_show, is_save);
-			imgs_batch.clear();
-			batchi++;
-		}
-	}
-	return  -1;
-}
-

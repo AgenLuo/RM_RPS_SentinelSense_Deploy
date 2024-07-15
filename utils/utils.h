@@ -217,4 +217,6 @@ namespace utils
     private:
         cudaEvent_t start, end;
     };
+
+    void sendmessage(int fd ,const std::vector<Result> &results);
 }
