@@ -30,7 +30,8 @@ namespace utils
             "dog","horse","motorbike","person","pottedplant","sheep","sofa","train","tvmonitor"
         };
         const std::vector<std::string> face2 = {"non-face", "face"};
-        const std::vector<std::string> RM = {"RH","RE","RI","RG","BH","BE","BI","BG","RUK","BUK","UK","D"};
+        const std::vector<int> RM = {1,2,3,4,6,7,8,9,5,10,11,12};
+//        const std::vector<std::int> RM = {"RH","RE","RI","RG","BH","BE","BI","BG","RU","BU","UK","DH"};
     }
     namespace Colors
     {
@@ -85,7 +86,7 @@ namespace utils
     struct InitParameter
     {
         int num_class{ 80 }; // coco 
-        std::vector<std::string> class_names;
+        std::vector<int> class_names;
         std::vector<std::string> input_output_names;
 
         bool dynamic_batch{ true };
@@ -173,21 +174,22 @@ namespace utils
 
     std::string getTimeStamp();
 
-    void show(const std::vector<std::vector<Box>>& objectss, const std::vector<std::string>& classNames,
+    void show(const std::vector<std::vector<Box>>& objectss, const std::vector<int>& classNames,
          const int& cvDelayTime, std::vector<cv::Mat>& imgsBatch);
 
 
     struct Result {
-        std::string className;
+        int className;
+        bool sig;
         int x;
         int y;
         int conf;
     };
 
-    std::vector<Result> getitom(const std::vector<std::vector<Box>>& objectss, const std::vector<std::string>& classNames,
+    std::vector<Result> getitom(const std::vector<std::vector<Box>>& objectss, const std::vector<int>& classNames,
                                       const int& cvDelayTime, std::vector<cv::Mat>& imgsBatch);
 
-    void save(const std::vector<std::vector<Box>>& objectss, const std::vector<std::string>& classNames,
+    void save(const std::vector<std::vector<Box>>& objectss, const std::vector<int>& classNames,
         const std::string& savePath, std::vector<cv::Mat>& imgsBatch, const int& batchSize, const int& batchi);
 
     class HostTimer

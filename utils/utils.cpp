@@ -1,5 +1,6 @@
 #include"../utils/utils.h"
 #include "../include/serialport.h"
+#include "../include/CRC_Check.h"
 
 void utils::saveBinaryFile(float *vec, size_t len, const std::string &file) {
     std::ofstream out(file, std::ios::out | std::ios::binary);
@@ -129,47 +130,84 @@ std::string utils::getTimeStamp() {
 }
 
 void utils::sendmessage(int serialPort1,const std::vector<Result> &results) {
-    char sig[3] = "ED";
     for (const auto &result: results) {
-        char str[9] = "BE000000";
+        uint8_t str[8] = {0xbe,0x0,0x0,0x0,0x0,0x0,0x0};
         sample::gLogInfo << "YOLOOUT::" << result.className << "::" << result.conf << "%" << "::" << result.x << "::"
                          << result.y << std::endl;// 打印拼接后的结果
-        switch (result.x) {
-            case 1 ... 216 :
-                str[2] = 'A';
-                break;
-            case 217 ... 432 :
-                str[2] = 'B';
-                break;
-            case 433 ... 648 :
-                str[2] = 'C';
-                break;
-            case 649 ... 864 :
-                str[2] = 'D';
-                break;
-            case 865 ... 1080:
-                str[2] = 'E';
-                break;
+        if (result.sig){
+            str[1] = {0x1};
+            int classify = result.className;
+            switch (result.x) {
+                case 1 ... 216 :
+                    str[2] = {0x1};
+                    break;
+                case 217 ... 432 :
+                    str[2] = {0x2};
+                    break;
+                case 433 ... 648 :
+                    str[2] = {0x3};
+                    break;
+                case 649 ... 864 :
+                    str[2] = {0x4};
+                    break;
+                case 865 ... 1080:
+                    str[2] = {0x5};
+                    break;
+            }
+            switch (result.y) {
+                case 1 ... 200 :
+                    str[3] = {0x1};
+                    break;
+                case 201 ... 400 :
+                    str[3] = {0x2};
+                    break;
+                case 401 ... 600 :
+                    str[3] = {0x3};
+                    break;
+            }
+            switch (classify) {
+                case 1 ... 5 :{
+                    str[4] = {0x0};
+                }
+                case 6 ... 10 :{
+                    str[4] = {0x1};
+                    classify = classify - 5;
+                }
+                case 11 ... 12 :{
+                    str[4] = {0x2};
+                }
+            }
+            switch (classify) {
+                case 1 : {
+                    str[5] = {0x0};
+                }
+                case 2 : {
+                    str[5] = {0x1};
+                }
+                case 3 : {
+                    str[5] = {0x2};
+                }
+                case 4 : {
+                    str[5] = {0x3};
+                }
+                case 5 : {
+                    str[5] = {0x4};
+                }
+                case 11 : {
+                    str[5] = {0x5};
+                }
+                case 12 : {
+                    str[5] = {0x6};
+                }
+            }
         }
-        switch (result.y) {
-            case 1 ... 200 :
-                str[3] = '1';
-                break;
-            case 201 ... 400 :
-                str[3] = '2';
-                break;
-            case 401 ... 600 :
-                str[3] = '3';
-                break;
-        }
-        strncpy(str + 4, result.className.c_str(), result.className.size()); // 拷贝string到char数组中，从第3个位置开始拷贝
-        strncpy(str + 6, sig, 2); // 拷贝string到char数组中，从第3个位置开始拷贝
+        Append_CRC8_Check_Sum(str,7);
         sample::gLogInfo << "SerialOUT::" << str << std::endl; // 打印拼接后的结果
         write(serialPort1, str, 6); // 写入6个字符到串口
     }
 }
 
-void utils::show(const std::vector<std::vector<utils::Box>> &objectss, const std::vector<std::string> &classNames,
+void utils::show(const std::vector<std::vector<utils::Box>> &objectss, const std::vector<int> &classNames,
                  const int &cvDelayTime, std::vector<cv::Mat> &imgsBatch) {
     std::string windows_title = "image";
     if (!imgsBatch[0].empty()) {
@@ -231,24 +269,25 @@ void utils::show(const std::vector<std::vector<utils::Box>> &objectss, const std
 }
 
 std::vector<utils::Result>
-utils::getitom(const std::vector<std::vector<utils::Box>> &objectss, const std::vector<std::string> &classNames,
+utils::getitom(const std::vector<std::vector<utils::Box>> &objectss, const std::vector<int> &classNames,
                const int &cvDelayTime, std::vector<cv::Mat> &imgsBatch) {
     std::vector<utils::Result> results;
     results.clear();
-//    Result result;
-//    result.className = "RG";
-//    result.x = 100;
-//    result.y = 100;
-//    result.conf = 60;
-//    results.push_back(result);
+    Result result;
+    result.className = 12;
+    result.sig = FALSE;
+    result.x = 1;
+    result.y = 1;
+    result.conf = 0;
+    results.push_back(result);
     for (size_t bi = 0; bi < imgsBatch.size(); bi++)
     {
         if (!objectss.empty())
         {
             for (auto& box : objectss[bi])
             {
-                Result result;
                 result.className = classNames[box.label];
+                result.sig = TRUE;
                 result.x = int(box.left + box.right)/2;
                 result.y = int(box.top + box.right)/2;
                 result.conf = box.confidence*100;
@@ -259,7 +298,7 @@ utils::getitom(const std::vector<std::vector<utils::Box>> &objectss, const std::
     return results; // 返回填充好的向量
 }
 
-void utils::save(const std::vector<std::vector<Box>> &objectss, const std::vector<std::string> &classNames,
+void utils::save(const std::vector<std::vector<Box>> &objectss, const std::vector<int> &classNames,
                  const std::string &savePath, std::vector<cv::Mat> &imgsBatch, const int &batchSize,
                  const int &batchi) {
     cv::Scalar color = cv::Scalar(0, 255, 0);
