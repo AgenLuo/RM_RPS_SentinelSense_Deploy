@@ -1,27 +1,22 @@
 mode:
   debug: True
   standard: False
-
-#config for standard version
 config_st:
-  model:
-  size:
+  model: ~
+  size: ~
   batch_size: 1
-  video:
-  img:
+  video: ~
+  img: ~
   cam_id: 0
   show: False
   save: True
-  savePath:
-
-#config for debug version
+  savePath: ~
+  saveSeed: ~
 config_de:
-#  model:
   size: 640
   batch_size: 1
-#  video:
-#  img:
   cam_id: 0
   show: True
-  save: False
-#  savePath:
+  save: True
+  savePath: /home/plusseven/桌面/RM_RPS_SentinelSense_Deploy/img/
+  saveSeed: 9

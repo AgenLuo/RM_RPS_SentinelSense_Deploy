@@ -1,6 +1,7 @@
 #include"../utils/utils.h"
 #include "../include/serialport.h"
 #include "../include/CRC_Check.h"
+#include <time.h>
 
 void utils::saveBinaryFile(float *vec, size_t len, const std::string &file) {
     std::ofstream out(file, std::ios::out | std::ios::binary);
@@ -310,26 +311,17 @@ utils::getitom(const std::vector<std::vector<utils::Box>> &objectss, const std::
 
 void utils::save(const std::vector<std::vector<Box>> &objectss, const std::vector<int> &classNames,
                  const std::string &savePath, std::vector<cv::Mat> &imgsBatch, const int &batchSize,
-                 const int &batchi) {
+                 const int &batchi, const int &seed) {
     cv::Scalar color = cv::Scalar(0, 255, 0);
     cv::Point bbox_points[1][4];
     const cv::Point *bbox_point0[1] = {bbox_points[0]};
     int num_points[] = {4};
+    time_t currenttime;
+    time(&currenttime);
+    cv::waitKey(1); // waitting for writting imgs
     for (size_t bi = 0; bi < imgsBatch.size(); bi++) {
         if (!objectss.empty()) {
             for (auto &box: objectss[bi]) {
-                if (classNames.size() == 91) // coco91
-                {
-                    color = Colors::color91[box.label];
-                }
-                if (classNames.size() == 80) // coco80
-                {
-                    color = Colors::color80[box.label];
-                }
-                if (classNames.size() == 20) // voc20
-                {
-                    color = Colors::color20[box.label];
-                }
                 if (classNames.size() == 12) // RM
                 {
                     color = Colors::color12[box.label];
@@ -344,18 +336,15 @@ void utils::save(const std::vector<std::vector<Box>> &objectss, const std::vecto
                 cv::fillPoly(imgsBatch[bi], bbox_point0, num_points, 1, color);
                 cv::putText(imgsBatch[bi], det_info, bbox_points[0][0], cv::FONT_HERSHEY_DUPLEX, 0.6,
                             cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
-
                 if (!box.land_marks.empty()) {
                     for (auto &pt: box.land_marks) {
                         cv::circle(imgsBatch[bi], pt, 1, cv::Scalar(255, 255, 255), 1, cv::LINE_AA, 0);
                     }
                 }
             }
+            cv::imwrite(savePath + "REC" + std::to_string(seed) + std::to_string(currenttime) + ".jpg", imgsBatch[bi]);
+            cv::waitKey(1); // waitting for writting imgs
         }
-
-        int imgi = batchi * batchSize + bi;
-        cv::imwrite(savePath + "_" + std::to_string(imgi) + ".jpg", imgsBatch[bi]);
-        cv::waitKey(1); // waitting for writting imgs
     }
 }
 

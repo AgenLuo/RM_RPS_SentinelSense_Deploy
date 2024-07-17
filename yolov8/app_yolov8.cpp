@@ -2,8 +2,12 @@
 #include"yolov8.h"
 #include <thread>
 #include "../include/serialport.h"
+#include <time.h>
 
 SerialPort serialPort1;
+time_t start_time, end_time;
+int saveSeed;
+
 
 void setParameters(utils::InitParameter &initParameters) {
     initParameters.class_names = utils::dataSets::RM;
@@ -36,8 +40,14 @@ void task(YOLOV8& yolo, const utils::InitParameter& param, std::vector<cv::Mat>&
     utils::sendmessage(serialPort1.fd,results);
     if (isShow)
         utils::show(yolo.getObjectss(), param.class_names, delayTime, imgsBatch);
-    if (isSave)
-        utils::save(yolo.getObjectss(), param.class_names, param.save_path, imgsBatch, param.batch_size, batchi);
+    if (isSave) {
+        time(&end_time);
+        double cost = difftime(end_time, start_time);
+        if (cost > 1){
+            utils::save(yolo.getObjectss(), param.class_names, param.save_path, imgsBatch, param.batch_size, batchi, saveSeed);
+            time(&start_time);
+        }
+    }
     yolo.reset();
 }
 
@@ -97,6 +107,11 @@ int main(int argc, char **argv) {
                     is_save = config["config_de"]["save"].as<bool>();
                 if (is_save) {
                     param.save_path = config["config_de"]["savePath"].as<std::string>();
+                    saveSeed = config["config_de"]["saveSeed"].as<int>();
+                    std::ofstream fout(yaml_path); //< C++ stream 读取文件
+                    config["config_de"]["saveSeed"] = saveSeed + 1;	//< 修改格式 1
+                    fout << config;
+                    fout.close();
                 }
             } else if (config["mode"]["standard"]) {
                 if (config["config_st"]["model"])
@@ -120,6 +135,11 @@ int main(int argc, char **argv) {
                     is_save = config["config_st"]["save"].as<bool>();
                 if (is_save) {
                     param.save_path = config["config_st"]["savePath"].as<std::string>();
+                    saveSeed = config["config_st"]["saveSeed"].as<int>();
+                    std::ofstream fout(yaml_path); //< C++ stream 读取文件
+                    config["config_st"]["saveSeed"] = saveSeed + 1;	//< 修改格式 1
+                    fout << config;
+                    fout.close();
                 }
             }
             param.batch_size = batch_size;
@@ -162,6 +182,7 @@ int main(int argc, char **argv) {
     imgs_batch.reserve(param.batch_size);
     sample::gLogInfo << imgs_batch.capacity() << std::endl;
     int batchi = 0;
+    time(&start_time);
     while (capture.isOpened())
     {
         if (batchi >= total_batches && source != utils::InputStream::CAMERA)

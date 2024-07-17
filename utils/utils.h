@@ -190,7 +190,7 @@ namespace utils
                                       const int& cvDelayTime, std::vector<cv::Mat>& imgsBatch);
 
     void save(const std::vector<std::vector<Box>>& objectss, const std::vector<int>& classNames,
-        const std::string& savePath, std::vector<cv::Mat>& imgsBatch, const int& batchSize, const int& batchi);
+        const std::string& savePath, std::vector<cv::Mat>& imgsBatch, const int& batchSize, const int& batchi, const int& seed);
 
     class HostTimer
     {
