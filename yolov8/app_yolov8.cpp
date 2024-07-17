@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
     std::string model_path = "../best.trt";
     std::string video_path = "../../data/people.mp4";
     std::string image_path = "../../data/bus.jpg";
-    std::string yaml_path = "/home/plusseven/桌面/Comb/TensorRT-Alpha-main(check)/config.yaml";
+    std::string yaml_path = "/home/plusseven/桌面/RM_RPS_SentinelSense_Deploy/config.yaml";
 
     // camera' id 相机id
     int camera_id = 0;

@@ -131,9 +131,9 @@ std::string utils::getTimeStamp() {
 
 void utils::sendmessage(int serialPort1,const std::vector<Result> &results) {
     for (const auto &result: results) {
-        uint8_t str[8] = {0xbe,0x0,0x0,0x0,0x0,0x0,0x0};
-        sample::gLogInfo << "YOLOOUT::" << result.className << "::" << result.conf << "%" << "::" << result.x << "::"
-                         << result.y << std::endl;// 打印拼接后的结果
+        uint8_t str[8] = {0xbe,0x0,0x0,0x0,0x0,0x0,0x0,0xed};
+        sample::gLogInfo << "YoloOUT::" <<std::dec<< result.className << "-" << result.conf << "%" << "(" << result.x << ","
+                         << result.y << ")" <<std::endl;// 打印拼接后的结果
         if (result.sig){
             str[1] = {0x1};
             int classify = result.className;
@@ -166,44 +166,49 @@ void utils::sendmessage(int serialPort1,const std::vector<Result> &results) {
                     break;
             }
             switch (classify) {
-                case 1 ... 5 :{
+                case 1 ... 5 :
                     str[4] = {0x0};
-                }
-                case 6 ... 10 :{
+                    break;
+                case 6 ... 10 :
                     str[4] = {0x1};
                     classify = classify - 5;
-                }
-                case 11 ... 12 :{
+                    break;
+                case 11 ... 12 :
                     str[4] = {0x2};
-                }
+                    break;
             }
             switch (classify) {
-                case 1 : {
+                case 1 :
                     str[5] = {0x0};
-                }
-                case 2 : {
+                    break;
+                case 2 :
                     str[5] = {0x1};
-                }
-                case 3 : {
+                    break;
+                case 3 :
                     str[5] = {0x2};
-                }
-                case 4 : {
+                    break;
+                case 4 :
                     str[5] = {0x3};
-                }
-                case 5 : {
+                    break;
+                case 5 :
                     str[5] = {0x4};
-                }
-                case 11 : {
+                    break;
+                case 11 :
                     str[5] = {0x5};
-                }
-                case 12 : {
+                    break;
+                case 12 :
                     str[5] = {0x6};
-                }
+                    break;
             }
         }
         Append_CRC8_Check_Sum(str,7);
-        sample::gLogInfo << "SerialOUT::" << str << std::endl; // 打印拼接后的结果
-        write(serialPort1, str, 6); // 写入6个字符到串口
+        sample::gLogInfo << "SerialOUT::"; // 打印拼接后的结果
+        for (int i = 0; i <= 7; i++)
+        {
+            sample::gLogInfo << std::hex << (int)str[i] << " ";
+        }
+        sample::gLogInfo << std::endl;
+        write(serialPort1, str, 8); // 写入6个字符到串口
     }
 }
 
@@ -272,6 +277,7 @@ std::vector<utils::Result>
 utils::getitom(const std::vector<std::vector<utils::Box>> &objectss, const std::vector<int> &classNames,
                const int &cvDelayTime, std::vector<cv::Mat> &imgsBatch) {
     std::vector<utils::Result> results;
+    bool flag = TRUE;
     results.clear();
     Result result;
     result.className = 12;
@@ -286,6 +292,10 @@ utils::getitom(const std::vector<std::vector<utils::Box>> &objectss, const std::
         {
             for (auto& box : objectss[bi])
             {
+                if (flag){
+                    results.clear();
+                    flag = FALSE;
+                }
                 result.className = classNames[box.label];
                 result.sig = TRUE;
                 result.x = int(box.left + box.right)/2;
