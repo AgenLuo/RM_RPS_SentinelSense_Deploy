@@ -1,209 +1,137 @@
-# TensorRT-Alpha
-<div align="center">
+# RM_RPS_SentinelSense_Deploy
 
-  [![Cuda](https://img.shields.io/badge/CUDA-11.3-%2376B900?logo=nvidia)](https://developer.nvidia.com/cuda-toolkit-archive)
-  [![](https://img.shields.io/badge/TensorRT-8.4.2.4-%2376B900.svg?style=flat&logo=tensorrt)](https://developer.nvidia.com/nvidia-tensorrt-8x-download)
-  [![](https://img.shields.io/badge/ubuntu-18.04-orange.svg?style=flat&logo=ubuntu)](https://releases.ubuntu.com/18.04/)
-  [![](https://img.shields.io/badge/windows-10-blue.svg?style=flat&logo=windows)](https://www.microsoft.com/)
+## 项目介绍
+    本项目是基于FeiYull发布的TensorRT-Alpha进行改进从而实现哨兵全向感知功能的神经网络训练代码。
+     
+    本项目旨在通过Ultralytics YOLOv8神经网络实现哨兵对周围战场环境的事态感知，从而为火控、导航和决策提供更多的战场信息。
+    
+    本项目相较原版：替换了参数设置模式、增加了串口通信模块、修改了部分其他代码。
+    
+    注意：本项目只包括模型加速部署部分，模型训练请去Train仓库。
 
-  [English](README_en.md) | 简体中文<br>
+## 环境依赖
+    Ubuntu20.04
+    CUDA(JetPack自带)
+    cudnn(JetPack自带)
+    tensorrt(JetPack自带)
+    opencv(JetPack自带)
 
-  <br>
-  </div>
 
-## 可视化
-<div align='center'>
-  <img src='.github/facemesh.jpg' width="143px">
-  <img src='.github/people.gif' width="338px">
-  <img src='.github/yolov8-snow.gif' height="190px" width="230px">
-  <br>
-  <img src='.github/yolov8-stree.gif'  width="260px">
-  <img src='.github/u2net.gif'  width="190px">
-  <img src='.github/libfacedet.gif'  width="260px">
-  <br>
-</div>
+## 目录结构描述
+    ├── cmake                   // common cmake所在文件夹
+    
+    │   └── common.cmake        // 全局cmake配置
 
-## 介绍
-本仓库提供深度学习CV领域模型加速部署案例，仓库实现的cuda c支持多batch图像预处理、推理、decode、NMS。大部分模型转换流程为：torch->onnx->tensorrt。
-获取onnx文件以下有两种方式：<br>
+    ├── include                 // 串口头文件所在文件夹
+    
+    │   ├── Content.h           // 目标跟踪相关文件夹
+    
+    │   ├── CRC_Check.h         // CRC校验
+    
+    │   └── serialport.h        // 串口
 
-<details>
-<summary>pth -> trt</summary>
-coming soon.
-</details>
+    ├── src                     // 串口模块所在文件夹
+    
+    │   ├── Content.cpp         // 目标跟踪相关文件夹
+    
+    │   ├── CRC_Check.cpp       // CRC校验
+    
+    │   └── serialport.cpp      // 串口
+    
+    ├── tool                    // 工具脚本所在文件夹
 
-<details>
-<summary>pth -> onnx -> trt:</summary>
+    │   └── onnx2trt            // onnx转trt的工具（弃用）
+    
+    ├── utils                   // 工具库
+    
+    │   ├── tracking            // 跟踪器所在文件夹
+    
+    │   ├── common_include.h    // 数据处理相关函数和脚本文件夹
+    
+    │   ├── kernel_function.cu  // kernel运算
+    
+    │   ├── kernel_function.h   // kernel头文件
+    
+    │   ├── utils.cpp           // 工具函数
+    
+    │   ├── utils.h             // 工具函数头文件
+    
+    │   ├── yolo.cpp            // 模型相关函数
+    
+    │   └── yolo.h              // 模型相关函数头文件
+    
+    ├── yolov8                  // 主函数文件夹
+    
+    │   ├── app_yolov8.cpp      // 主函数
+    
+    │   ├── CMakeLists.txt      // cmake文件
+    
+    │   ├── decode_yolov8.cu    // yolov8解耦
+    
+    │   ├── decode_yolov8.h     // yolov8解耦头文件
+     
+    │   ├── ...                 // 杂七杂八的东西
+    
+    │   ├── yolov8.cpp          // yolo相关函数
+    
+    │   └── yolov8.h            // yolo相关函数头文件
 
-- [i]. 本仓库提供的网盘直接下载onnx。[weiyun](https://share.weiyun.com/3T3mZKBm) or [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)
-- [ii]. 按照本仓库提供的指令，手动从相关源代码框架导出onnx。
+    ├── config.yaml             // 主函数参数配置文件
+    
+    ├── include                 // 串口参数配置文件
+    
+    └── LICENSE                 // 开源声明证书
 
-</details>
-
-## 更新
-- 2023.01.01  🔥 更新 yolov3, yolov4, yolov5, yolov6
-- 2023.01.04  🍅 更新 yolov7, yolox, yolor
-- 2023.01.05  🎉 更新 u2net, libfacedetection
-- 2023.01.08  🚀 全网最快支持yolov8的tensorrt部署
-- 2023.01.20  🍏  更新 efficientdet, pphunmanseg
-- 2023.12.09  🍁 更新 yolov8-pose
-- 2023.12.19  🍉 更新 yolov8-seg
-- 2023.12.27  💖 更新 yolonas
-
-## 安装
-兼容平台: Windows and Linux. 以下环境已被测过：<br>
-<details>
-<summary>Ubuntu18.04</summary>
-
-- cuda11.3
-- cudnn8.2.0
-- gcc7.5.0
-- tensorrt8.4.2.4
-- opencv3.x or 4.x
-- cmake3.10.2
-</details>
-
-<details>
-<summary>Windows10</summary>
-
-- cuda11.3 
-- cudnn8.2.0
-- visual studio 2017 or 2019 or 2022
-- tensorrt8.4.2.4
-- opencv3.x or 4.x
-</details>
-
-<details>
-<summary>创建Python环境(可选）</summary>
+## 使用说明
+1.修改通用cmake文件
 
 ```bash
-# install miniconda first
-conda create -n tensorrt-alpha python==3.8 -y
-conda activate tensorrt-alpha
-git clone https://github.com/FeiYull/tensorrt-alpha
-cd tensorrt-alpha
-pip install -r requirements.txt  
-```
-</details>
-
-安装教程：
-- [Install For Ubuntu18.04](Install_For_Ubuntu18.04/Install_For_Ubuntu18.04.md)<br>
-- [Docker For Linux](docker/README.md)<br>
-
-## 快速开始
-### Ubuntu18.04
-设置TensorRT根目录（安装目录）路径:
-```bash
-git clone https://github.com/FeiYull/tensorrt-alpha
 cd tensorrt-alpha/cmake
 vim common.cmake
-# 把common.cmake文件第20行中的TensorRT_ROOT修改成您的TensorRT安装目录, 例如改成如下:
-# set(TensorRT_ROOT /home/feiyull/TensorRT-8.4.2.4)
+# set var TensorRT_ROOT to your path in line 20, eg:
+# set(TensorRT_ROOT /usr/src/tensorrt)
 ```
-开始编译、运行工程，例如:[yolov8](yolov8/README.md)
+2.将onnx在本地转换成trt文件
 
-## 模型
-目前已实现30多个主流模型，部分整理好的onnx文件如下列表：
-<div align='center'>
-
-| model|tesla v100(32G)|weiyun |google driver |
- :-: | :-: | :-: | :-: |
-|[yolov3](yolov3/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|      
-|[yolov4](yolov4/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|
-|[yolov5](yolov5/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[yolov6](yolov6/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[yolov7](yolov7/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[yolov8](yolov8/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[yolox](yolox/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[yolor](yolor/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[u2net](u2net/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[libfacedetection](libfacedetection/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[facemesh](facemesh/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|     
-|[pphumanseg](pphumanseg/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)|  
-|[efficientdet](efficientdet/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)| 
-|[yolov8-pose](yolov8-pose/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)| 
-|[yolov8-seg](yolov8-seg/README.md)| |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)| 
-|[yolonas](yolonas/README.md)|  |[weiyun](https://share.weiyun.com/3T3mZKBm)| [google driver](https://drive.google.com/drive/folders/1-8phZHkx_Z274UVqgw6Ma-6u5AKmqCOv?usp=sharing)| 
-|more...(🚀: I will be back soon!)    |      |          |
-</div>  
-
-🍉稍后在tesla v100 和 A100上测量时间开销!现在看看yolov8n在移动端RTX2070m(8G)的性能表现：
-<div align='center'>
-
-| 模型 | 视频分辨率 | 模型输入尺寸 |显存占用 |GPU利用率|
-  :-: | :-: | :-: | :-: | :-: |
-|yolov8n|1920x1080|8x3x640x640|1093MiB/7982MiB| 14%| 
-
- <center>	<!--将图片和文字居中-->
-<img src=".github/yolov8n-b8-1080p-to-640.jpg"
-     alt="无法显示图片时显示的文字"
-     style="zoom:40%"/>
-<br>		<!--换行-->
-<center>一个batch内，平均每一帧的时间开销	<!--标题--></center>
-    <br>		<!--换行-->
-</div>
-<br>
-
-## 严格的精度对齐，官方效果 vs TensorRT-Alpha:
-<br>
-<div align='center'>			<!--块级封装-->
-     <center>	<!--将图片和文字居中-->
-    <img src=".github/yolov8n-Offical(left)vsOurs(right).jpg"
-         alt="无法显示图片时显示的文字"
-         style="zoom:80%"/>
-    <br>		<!--换行-->
-    <center>yolov8n : Offical( left ) vs Ours( right )	<!--标题--></center>
-    <br>		<!--换行-->
-    <br>		<!--换行-->
-    <center>	<!--将图片和文字居中-->
-    <img src=".github/yolov7-tiny-Offical(left)vsOurs(right).jpg"
-         alt="无法显示图片时显示的文字"
-         style="zoom:80%"/>
-    <br>		<!--换行-->
-    <center>yolov7-tiny : Offical( left ) vs Ours( right )	<!--标题--></center>
-    <br>		<!--换行-->
-    <br>		<!--换行-->
-    <img src=".github/yolov6s-v6.3-Offical(left)vsOurs(right).jpg"
-         alt="无法显示图片时显示的文字"
-         style="zoom:80%"/>
-    <br>		<!--换行-->
-    <center>yolov6s : Offical( left ) vs Ours( right )	<!--标题--></center>
-    <br>		<!--换行-->
-    <br>		<!--换行-->
-    <img src=".github/yolov5s-v5.7-Offical(left)vsOurs(right)-img2.jpg"
-         alt="无法显示图片时显示的文字"
-         style="zoom:80%"/>
-    <br>		<!--换行-->
-    <center>yolov5s : Offical( left ) vs Ours( right )	<!--标题--></center>
-    <br>		<!--换行-->
-    <br>		<!--换行-->
-    <img src=".github/yolov5s-v5.7-Offical(left)vsOurs(right)-img1.jpg"
-         alt="无法显示图片时显示的文字"
-         style="zoom:80%"/>
-    <br>		<!--换行-->
-    <center>yolov5s : Offical( left ) vs Ours( right )	<!--标题--></center>
-    <br>		<!--换行-->
-    <br>		<!--换行-->
-    <img src=".github/libfacedet-Offical(left)vsOurs(right-topk-2000).jpg"
-         alt="无法显示图片时显示的文字"
-         style="zoom:100%"/>
-    <br>		<!--换行-->
-    <center>libfacedetection : Offical( left ) vs Ours( right topK:2000)	<!--标题--></center>
-    <br>		<!--换行-->
-    <br>		<!--换行-->
-    </center>
-</div>
-
-
-
-## Citation
 ```bash
-@misc{FeiYull_TensorRT-Alpha,  
-  author = {FeiYull},  
-  title = {TensorRT-Alpha},  
-  year = {2023},  
-  publisher = {GitHub},  
-  journal = {GitHub repository},  
-  howpublished = {https://github.com/FeiYull/tensorrt-alpha}
-}
+# put your onnx file in this path:tensorrt-alpha/data/yolov8
+cd tensorrt-alpha/data/yolov8
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/feiyull/TensorRT-8.4.2.4/lib
+# official
+/usr/src/tensorrt/bin/trtexec   --onnx=yolov8n.onnx  --saveEngine=yolov8n.trt  --buildOnly --minShapes=images:1x3x640x640 --optShapes=images:2x3x640x640 --maxShapes=images:4x3x640x640
+/usr/src/tensorrt/bin/trtexec   --onnx=yolov8s.onnx  --saveEngine=yolov8s.trt  --buildOnly --minShapes=images:1x3x640x640 --optShapes=images:2x3x640x640 --maxShapes=images:4x3x640x640
+/usr/src/tensorrt/bin/trtexec   --onnx=yolov8x.onnx  --saveEngine=yolov8x.trt  --buildOnly --minShapes=images:1x3x640x640 --optShapes=images:2x3x640x640 --maxShapes=images:4x3x640x640
+# recommend(thats actually what i do, im lazy)
+/usr/src/tensorrt/bin/trtexec   --onnx=yolov8n.onnx  --saveEngine=yolov8n.trt  --fp16
 ```
+3.配置参数
+
+```bash
+vim config.yaml
+根据需求自己改
+vim Port_config.yaml
+根据需求自己改
+vim src/serialport.cpp
+修改yaml文件路径
+vim yolov8/app_yolov8.cpp
+修改yaml文件路径
+```
+4.运行
+
+```bash
+cd tensorrt-alpha/yolov8
+mkdir build
+cd build
+cmake ..
+make -j4
+./app_yolov8 
+```
+
+## 注意事项
+    使用开机自启的服务后需要将所有用到的路径改为绝对路径，不然程序会异常终止
+
+## 版本内容更新
+###### v1.0.0:
+    1、提交了基础代码并实现所有基础功能
+
+ 
