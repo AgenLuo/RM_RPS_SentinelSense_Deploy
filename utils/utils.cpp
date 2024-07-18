@@ -82,7 +82,7 @@ bool utils::setInputStream(const utils::InputStream &source, const std::string &
                            (total_frames / param.batch_size) : (total_frames / param.batch_size + 1);
             break;
         case utils::InputStream::CAMERA:
-            capture.open(cameraID);
+            capture.open(cameraID,cv::CAP_V4L2);
             capture.set(cv::CAP_PROP_AUTO_EXPOSURE, 1);  //这里设置为1才能调整曝光
             capture.set(cv::CAP_PROP_BRIGHTNESS, 0); //亮度
             capture.set(cv::CAP_PROP_FRAME_WIDTH, 1080);//大小

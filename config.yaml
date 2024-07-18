@@ -19,4 +19,4 @@ config_de:
   show: True
   save: True
   savePath: /home/plusseven/桌面/RM_RPS_SentinelSense_Deploy/img/
-  saveSeed: 9
+  saveSeed: 11
